@@ -29,7 +29,8 @@ module.exports = function(RED) {
     // The Server Definition - this opens (and closes) the connection
     function pca9685Node(config) {
         RED.nodes.createNode(this, config);
-        
+        this.changeNodeStatus=function(){};
+        this.changeNodeStatus({fill:"yellow",shape:"ring",text:"Initializing"});
         // node configuration
         var options = {
             i2c: i2cBus.openSync(parseInt(config.deviceNumber) || 1),
@@ -41,15 +42,17 @@ module.exports = function(RED) {
         this.pwm = new Pca9685Driver(options, function startLoop(err) {
             if (err) {
                 console.error("Error initializing PCA9685");
+                this.changeNodeStatus({fill:"red",shape:"dot",text:"Error"});
              } else {
             	console.log("Initialized PCA9685");
+                this.changeNodeStatus({fill:"green",shape:"dot",text:"Initialized"});
             }
-        });
-     
+        }.bind(this));
         
         this.on("close", function() {
             if (this.pwm != null) {
-            	this.pwm.dispose()
+            	this.pwm.dispose();
+                this.changeNodeStatus({fill:"red",shape:"ring",text:"Closed"});
             }
         });
     }
@@ -64,6 +67,10 @@ module.exports = function(RED) {
         this.channel = config.channel;
         this.payload = config.payload;
         this.onStep = config.onStep;
+
+        this.pca9685Node.changeNodeStatus = function(status) {
+        	this.status(status);
+        }.bind(this);
 
 		this.on("input", function(msg) {
 			var unit = msg.unit || this.unit || "percent (assumed)";
